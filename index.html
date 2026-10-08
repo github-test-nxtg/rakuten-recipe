@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#5C7A35">
+<title>今日のレシピ</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🍳</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Zen+Old+Mincho:wght@700;900&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#ECEFE6; --sheet:#FBFCF7; --ink:#1E2A3F; --sub:#5B6676;
+  --matcha:#5C7A35; --kaki:#D9692B; --line:#CDD3C4;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){
+  :root{
+    --paper:#161B22; --sheet:#1F2630; --ink:#E9ECE4; --sub:#A3ADB9;
+    --matcha:#9DBB6C; --kaki:#F08A4B; --line:#33404E; color-scheme:dark;
+  }
+}
+*,*::before,*::after{box-sizing:border-box}
+body{
+  margin:0; background:var(--paper); color:var(--ink);
+  font-family:"Zen Kaku Gothic New","Hiragino Sans","Yu Gothic",system-ui,sans-serif;
+  font-size:16px; line-height:1.75;
+}
+a{color:inherit}
+.wrap{max-width:720px; margin:0 auto; padding:24px 18px 56px}
+
+.himekuri{
+  background:var(--sheet); border:1px solid var(--line); border-top:10px solid var(--matcha);
+  padding:20px 22px 22px; display:grid; grid-template-columns:auto 1fr; gap:4px 22px; align-items:end;
+}
+.day{font-family:"Zen Old Mincho","Hiragino Mincho ProN",serif; font-weight:900;
+  font-size:clamp(84px,22vw,140px); line-height:.9; grid-row:span 2}
+.day.sun{color:var(--kaki)}
+.ym{font-size:15px; color:var(--sub)}
+.wd{font-family:"Zen Old Mincho",serif; font-size:26px; font-weight:700}
+
+.nav{display:flex; gap:8px; justify-content:space-between; margin:12px 0 22px}
+button{font:inherit; font-size:14px; cursor:pointer; border-radius:999px;
+  border:1px solid var(--line); background:var(--sheet); color:var(--ink); padding:8px 16px}
+button:hover{border-color:var(--ink)}
+button:disabled{opacity:.5; cursor:default}
+button:focus-visible,input:focus-visible,a:focus-visible,summary:focus-visible{outline:2px solid var(--kaki); outline-offset:2px}
+.primary{background:var(--matcha); border-color:var(--matcha); color:#fff; font-weight:700}
+
+.shunlabel{font-size:14px; color:var(--sub); margin:0 0 8px}
+.chips{display:flex; flex-wrap:wrap; gap:8px; margin-bottom:26px}
+.chip{padding:6px 14px; font-size:15px}
+.chip[aria-pressed="true"]{background:var(--matcha); border-color:var(--matcha); color:#fff; font-weight:700}
+
+.feature{background:var(--sheet); border:1px solid var(--line)}
+.feature img{display:block; width:100%; aspect-ratio:4/3; object-fit:cover; background:var(--line)}
+.fbody{padding:18px 20px 22px}
+.cat{font-size:13px; color:var(--matcha); font-weight:700}
+.feature h1{font-family:"Zen Old Mincho",serif; font-size:clamp(24px,6vw,34px); line-height:1.35; margin:4px 0 8px}
+.desc{color:var(--sub); margin:0 0 12px; font-size:15px}
+.meta{display:flex; flex-wrap:wrap; gap:6px 16px; font-size:14px; margin-bottom:14px}
+.meta span{border-bottom:2px solid var(--kaki)}
+.mats{display:flex; flex-wrap:wrap; gap:6px; margin:0 0 18px; padding:0; list-style:none}
+.mats li{font-size:13px; padding:2px 10px; border:1px solid var(--line); border-radius:4px; background:var(--paper)}
+.go{display:inline-block; text-decoration:none; background:var(--matcha); color:#fff; font-weight:700;
+  padding:11px 20px; border-radius:999px}
+.by{font-size:12px; color:var(--sub); margin-top:10px}
+
+h2{font-family:"Zen Old Mincho",serif; font-size:19px; margin:30px 0 10px}
+.others{list-style:none; margin:0; padding:0}
+.others a{display:grid; grid-template-columns:72px 1fr; gap:14px; align-items:center;
+  padding:10px 0; border-bottom:1px solid var(--line); text-decoration:none}
+.others img{width:72px; height:72px; object-fit:cover; border-radius:4px; background:var(--line)}
+.others b{display:block; font-weight:500; line-height:1.45}
+.others small{color:var(--sub)}
+
+.msg{background:var(--sheet); border:1px solid var(--line); padding:18px 20px; font-size:15px}
+.msg.err{border-left:4px solid var(--kaki)}
+
+details.settings{margin-top:40px; background:var(--sheet); border:1px solid var(--line); padding:14px 18px}
+summary{cursor:pointer; font-weight:700}
+.settings p{font-size:14px; color:var(--sub); margin:10px 0}
+label{display:flex; flex-direction:column; gap:4px; font-size:13px; color:var(--sub); margin-bottom:12px}
+input{font:inherit; font-size:15px; color:var(--ink); background:var(--paper);
+  border:1px solid var(--line); border-radius:6px; padding:9px 10px; width:100%}
+.credit{margin-top:28px; font-size:12px; color:var(--sub); text-align:center}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="himekuri">
+    <div class="day" id="day"></div>
+    <div class="ym" id="ym"></div>
+    <div class="wd" id="wd"></div>
+  </div>
+  <div class="nav">
+    <button id="prev">‹ 前の日</button>
+    <button id="today">今日</button>
+    <button id="next">次の日 ›</button>
+  </div>
+
+  <p class="shunlabel" id="shunlabel"></p>
+  <div class="chips" id="chips"></div>
+
+  <main id="main" aria-live="polite"></main>
+
+  <details class="settings" id="settings">
+    <summary>楽天APIの設定</summary>
+    <p>楽天ウェブサービスで発行したアプリIDとアクセスキーを入力してください。この端末のブラウザにだけ保存されます。</p>
+    <label>アプリID<input id="appId" autocomplete="off" spellcheck="false"></label>
+    <label>アクセスキー<input id="accessKey" autocomplete="off" spellcheck="false"></label>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button class="primary" id="save">保存して読み込む</button>
+      <button id="clearCache">キャッシュを消す</button>
+    </div>
+  </details>
+
+  <p class="credit"><a href="https://webservice.rakuten.co.jp/" target="_blank" rel="noopener">Supported by Rakuten Developers</a></p>
+</div>
+
+<script>
+// ---- 月ごとの旬の食材（表示名と、楽天レシピのカテゴリ名を探すためのキーワード）----
+const SHUN = {
+  1:[["白菜",["白菜"]],["大根",["大根"]],["ぶり",["ぶり","鰤"]],["ねぎ",["長ねぎ","ねぎ"]]],
+  2:[["菜の花",["菜の花"]],["牡蠣",["牡蠣","かき"]],["ほうれん草",["ほうれん草"]],["春菊",["春菊"]]],
+  3:[["新玉ねぎ",["新玉ねぎ","玉ねぎ"]],["はまぐり",["はまぐり","蛤"]],["春キャベツ",["春キャベツ","キャベツ"]],["さわら",["さわら","鰆"]]],
+  4:[["筍",["たけのこ","筍"]],["新じゃが",["新じゃが","じゃがいも"]],["アスパラ",["アスパラ"]],["あさり",["あさり"]]],
+  5:[["そら豆",["そら豆"]],["ごぼう",["ごぼう"]],["かつお",["かつお","鰹"]],["グリーンピース",["グリーンピース"]]],
+  6:[["梅",["梅"]],["あじ",["あじ","鯵"]],["ズッキーニ",["ズッキーニ"]],["きゅうり",["きゅうり"]]],
+  7:[["なす",["なす"]],["トマト",["トマト"]],["枝豆",["枝豆"]],["うなぎ",["うなぎ"]]],
+  8:[["ゴーヤ",["ゴーヤ"]],["とうもろこし",["とうもろこし"]],["オクラ",["オクラ"]],["かぼちゃ",["かぼちゃ"]]],
+  9:[["さんま",["さんま","秋刀魚"]],["さつまいも",["さつまいも"]],["里芋",["里芋"]],["梨",["梨"]]],
+  10:[["きのこ",["きのこ"]],["鮭",["鮭"]],["栗",["栗"]],["れんこん",["れんこん"]]],
+  11:[["かぶ",["かぶ"]],["柿",["柿"]],["牡蠣",["牡蠣","かき"]],["春菊",["春菊"]]],
+  12:[["大根",["大根"]],["ゆず",["ゆず"]],["たら",["たら","鱈"]],["白菜",["白菜"]]]
+};
+
+const API = "https://openapi.rakuten.co.jp/recipems/api/Recipe/";
+const $ = id => document.getElementById(id);
+const pad = n => String(n).padStart(2,"0");
+const keyOf = d => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+const WD = ["日曜日","月曜日","火曜日","水曜日","木曜日","金曜日","土曜日"];
+const doyOf = d => Math.floor((d - new Date(d.getFullYear(),0,0)) / 864e5);
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+
+function load(k){ try{ const v = localStorage.getItem(k); return v ? JSON.parse(v) : null; }catch(e){ return null; } }
+function store(k,v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){} }
+
+let cur = new Date(); cur.setHours(12,0,0,0);
+let picked = null;          // ユーザーが選んだ食材（null = 日替わりで自動）
+let token = 0;              // 古い読み込み結果を捨てるため
+
+// ---- JSONP（楽天APIが公式に対応している呼び出し方）----
+let lastCall = 0;
+async function call(path, params){
+  const creds = load("rk:creds");
+  if(!creds) throw {kind:"nocreds"};
+  const wait = Math.max(0, lastCall + 1100 - Date.now());   // 連続アクセスを避ける
+  if(wait) await new Promise(r => setTimeout(r, wait));
+  lastCall = Date.now();
+  return new Promise((resolve, reject) => {
+    const cb = "rk_" + Date.now() + "_" + Math.random().toString(36).slice(2);
+    const s = document.createElement("script");
+    const done = () => { clearTimeout(t); delete window[cb]; s.remove(); };
+    const t = setTimeout(() => { done(); reject({kind:"timeout"}); }, 15000);
+    window[cb] = d => { done(); (d && d.error) ? reject({kind:"api", detail:d}) : resolve(d); };
+    s.onerror = () => { done(); reject({kind:"network"}); };
+    const q = new URLSearchParams({...params, applicationId:creds.appId, accessKey:creds.accessKey, format:"json", formatVersion:"2", callback:cb});
+    s.src = API + path + "?" + q;
+    document.head.appendChild(s);
+  });
+}
+
+// ---- カテゴリ一覧（1週間キャッシュ）----
+async function categories(){
+  const c = load("rk:cats");
+  if(c && Date.now() - c.at < 7*864e5) return c.list;
+  const d = await call("CategoryList/20170426", {});
+  const r = d.result || {};
+  const list = [];
+  for(const size of ["large","medium","small"]){
+    for(const x of (r[size] || [])){
+      const m = String(x.categoryUrl || "").match(/category\/([\d-]+)/);
+      if(m) list.push({id:m[1], name:x.categoryName, size});
+    }
+  }
+  store("rk:cats", {at:Date.now(), list});
+  return list;
+}
+
+function findCategory(list, keywords){
+  for(const k of keywords){
+    const exact = list.find(c => c.name === k);
+    if(exact) return exact;
+  }
+  for(const k of keywords){
+    const hits = list.filter(c => c.name.includes(k)).sort((a,b) => a.name.length - b.name.length);
+    if(hits.length) return hits[0];
+  }
+  return null;
+}
+
+// ---- ランキング（同じ日・同じカテゴリは1日キャッシュ）----
+async function ranking(catId, dateKey){
+  const k = `rk:rank:${catId}:${dateKey}`;
+  const c = load(k);
+  if(c) return c;
+  const d = await call("CategoryRanking/20170426", {categoryId:catId});
+  const items = (d.result || []).map(x => x.recipeTitle ? x : (x.recipe || x));
+  store(k, items);
+  return items;
+}
+
+// ---- 画面 ----
+function renderHeader(){
+  const d = cur, m = d.getMonth()+1;
+  $("day").textContent = d.getDate();
+  $("day").classList.toggle("sun", d.getDay() === 0);
+  $("ym").textContent = `${d.getFullYear()}年 ${m}月`;
+  $("wd").textContent = WD[d.getDay()];
+  const t = new Date(); t.setHours(12,0,0,0);
+  $("today").disabled = keyOf(d) === keyOf(t);
+  $("shunlabel").textContent = `${m}月の旬の食材から選ぶ`;
+  const list = SHUN[m], auto = list[doyOf(d) % list.length][0];
+  const active = picked || auto;
+  $("chips").innerHTML = list.map(([label]) =>
+    `<button class="chip" aria-pressed="${label===active}" data-l="${esc(label)}">${esc(label)}</button>`).join("");
+  $("chips").querySelectorAll(".chip").forEach(b => b.onclick = () => { picked = b.dataset.l; render(); });
+  return list.find(x => x[0] === active);
+}
+
+function showMsg(html, err){ $("main").innerHTML = `<div class="msg${err?" err":""}">${html}</div>`; }
+
+function renderRecipes(items, catName, d){
+  if(!items.length){ showMsg("このカテゴリのレシピが見つかりませんでした。別の食材を選んでください。"); return; }
+  const fi = doyOf(d) % items.length;
+  const f = items[fi], rest = items.filter((_,i) => i !== fi);
+  const mats = (f.recipeMaterial || []).slice(0, 14);
+  $("main").innerHTML = `
+    <article class="feature">
+      ${f.foodImageUrl ? `<img src="${esc(f.foodImageUrl)}" alt="">` : ""}
+      <div class="fbody">
+        <div class="cat">${esc(catName)}の人気レシピ</div>
+        <h1>${esc(f.recipeTitle)}</h1>
+        ${f.recipeDescription ? `<p class="desc">${esc(f.recipeDescription)}</p>` : ""}
+        <div class="meta">
+          ${f.recipeIndication && f.recipeIndication!=="指定なし" ? `<span>調理時間 ${esc(f.recipeIndication)}</span>` : ""}
+          ${f.recipeCost && f.recipeCost!=="指定なし" ? `<span>費用 ${esc(f.recipeCost)}</span>` : ""}
+        </div>
+        ${mats.length ? `<ul class="mats">${mats.map(x => `<li>${esc(x)}</li>`).join("")}</ul>` : ""}
+        <a class="go" href="${esc(f.recipeUrl)}" target="_blank" rel="noopener">作り方を楽天レシピで見る</a>
+        ${f.nickname ? `<div class="by">レシピ：${esc(f.nickname)}さん</div>` : ""}
+      </div>
+    </article>
+    ${rest.length ? `<h2>ほかの人気レシピ</h2><ul class="others">${rest.map(r => `
+      <li><a href="${esc(r.recipeUrl)}" target="_blank" rel="noopener">
+        <img src="${esc(r.mediumImageUrl || r.foodImageUrl || "")}" alt="">
+        <span><b>${esc(r.recipeTitle)}</b><small>${esc(r.recipeIndication && r.recipeIndication!=="指定なし" ? r.recipeIndication : "")}</small></span>
+      </a></li>`).join("")}</ul>` : ""}`;
+}
+
+const ERRMSG = {
+  nocreds:"はじめに、下の「楽天APIの設定」でアプリIDとアクセスキーを入力してください。",
+  timeout:"楽天APIからの応答がありませんでした。通信環境を確認して、もう一度開いてください。",
+  network:"楽天APIに接続できませんでした。アプリIDとアクセスキー、楽天側のアプリ設定（許可するサイトのURL）を確認してください。",
+  api:"楽天APIがエラーを返しました。"
+};
+
+async function render(){
+  const my = ++token;
+  const entry = renderHeader();
+  const d = new Date(cur);
+  showMsg("レシピを読み込んでいます…");
+  try{
+    const list = await categories();
+    const cat = findCategory(list, entry[1]);
+    const items = await ranking(cat ? cat.id : "", keyOf(d));
+    if(my !== token) return;
+    renderRecipes(items, cat ? cat.name : "総合", d);
+  }catch(e){
+    if(my !== token) return;
+    let m = ERRMSG[e.kind] || "読み込みに失敗しました。";
+    if(e.kind === "api" && e.detail) m += `（${esc(e.detail.error)}: ${esc(e.detail.error_description || "")}）`;
+    showMsg(m, true);
+    if(e.kind === "nocreds" || e.kind === "network") $("settings").open = true;
+  }
+}
+
+function shift(n){ cur = new Date(cur); cur.setDate(cur.getDate()+n); picked = null; render(); }
+$("prev").onclick = () => shift(-1);
+$("next").onclick = () => shift(1);
+$("today").onclick = () => { cur = new Date(); cur.setHours(12,0,0,0); picked = null; render(); };
+
+const creds = load("rk:creds");
+if(creds){ $("appId").value = creds.appId; $("accessKey").value = creds.accessKey; }
+$("save").onclick = () => {
+  const appId = $("appId").value.trim(), accessKey = $("accessKey").value.trim();
+  if(!appId || !accessKey){ showMsg("アプリIDとアクセスキーの両方を入力してください。", true); return; }
+  store("rk:creds", {appId, accessKey});
+  $("settings").open = false;
+  render();
+};
+$("clearCache").onclick = () => {
+  try{ Object.keys(localStorage).filter(k => k.startsWith("rk:") && k !== "rk:creds").forEach(k => localStorage.removeItem(k)); }catch(e){}
+  render();
+};
+
+render();
+</script>
+</body>
+</html>
