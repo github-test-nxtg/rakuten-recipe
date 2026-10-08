@@ -87,6 +87,16 @@ summary{cursor:pointer; font-weight:700}
 label{display:flex; flex-direction:column; gap:4px; font-size:13px; color:var(--sub); margin-bottom:12px}
 input{font:inherit; font-size:15px; color:var(--ink); background:var(--paper);
   border:1px solid var(--line); border-radius:6px; padding:9px 10px; width:100%}
+.shunedit{margin-top:22px; padding-top:16px; border-top:1px dashed var(--line)}
+.shunedit h3{font-size:15px; margin:0 0 8px}
+.row{display:flex; gap:8px; align-items:center; flex-wrap:wrap}
+.row input{flex:1; min-width:140px}
+select{font:inherit; font-size:15px; color:var(--ink); background:var(--paper); border:1px solid var(--line); border-radius:6px; padding:8px 10px}
+.tags{display:flex; flex-wrap:wrap; gap:8px; margin:12px 0}
+.tag{display:inline-flex; align-items:center; gap:4px; padding:4px 6px 4px 12px; border:1px solid var(--line); border-radius:999px; background:var(--paper); font-size:14px}
+.tag button{border:none; background:none; padding:2px 8px; font-size:16px; line-height:1; color:var(--sub)}
+.tag button:hover{color:var(--kaki)}
+.empty{font-size:13px; color:var(--sub)}
 .credit{margin-top:28px; font-size:12px; color:var(--sub); text-align:center}
 </style>
 </head>
@@ -117,6 +127,18 @@ input{font:inherit; font-size:15px; color:var(--ink); background:var(--paper);
       <button class="primary" id="save">保存して読み込む</button>
       <button id="clearCache">キャッシュを消す</button>
     </div>
+    <div class="shunedit">
+      <h3>旬の食材を編集</h3>
+      <p>月ごとに表示する食材を追加・削除できます。食材名で楽天レシピのジャンルを探します。</p>
+      <div class="row"><select id="editMonth" aria-label="編集する月"></select></div>
+      <div class="tags" id="tags"></div>
+      <div class="row">
+        <input id="newIng" placeholder="例：ほうれん草" aria-label="追加する食材">
+        <button class="primary" id="addIng">追加</button>
+      </div>
+      <div class="row" style="margin-top:10px"><button id="resetIng">この月を初期設定に戻す</button></div>
+      <p id="ingMsg" style="min-height:1.2em"></p>
+    </div>
   </details>
 
   <p class="credit"><a href="https://webservice.rakuten.co.jp/" target="_blank" rel="noopener">Supported by Rakuten Developers</a></p>
@@ -138,6 +160,11 @@ const SHUN = {
   11:[["かぶ",["かぶ"]],["柿",["柿"]],["牡蠣",["牡蠣","かき"]],["春菊",["春菊"]]],
   12:[["大根",["大根"]],["ゆず",["ゆず"]],["たら",["たら","鱈"]],["白菜",["白菜"]]]
 };
+
+// 端末に保存した編集内容があればそちらを使う
+function getShun(m){ const c = load("rk:shun"); return (c && Array.isArray(c[m])) ? c[m] : SHUN[m]; }
+function setShun(m, list){ const c = load("rk:shun") || {}; c[m] = list; store("rk:shun", c); }
+function resetShun(m){ const c = load("rk:shun") || {}; delete c[m]; store("rk:shun", c); }
 
 const API = "https://openapi.rakuten.co.jp/recipems/api/Recipe/";
 const $ = id => document.getElementById(id);
@@ -245,11 +272,12 @@ function renderHeader(){
   const t = new Date(); t.setHours(12,0,0,0);
   $("today").disabled = keyOf(d) === keyOf(t);
   const all = load("rk:mode") === "all";
-  $("shunlabel").textContent = all ? "旬の食材にしぼらず、日替わりのジャンルから表示中" : `${m}月の旬の食材から選ぶ`;
-  const list = SHUN[m], auto = list[doyOf(d) % list.length][0];
-  const active = all ? null : (picked || auto);
+  const list = getShun(m), auto = list.length ? list[doyOf(d) % list.length][0] : null;
+  if(picked && !list.some(x => x[0] === picked)) picked = null;
+  const active = (all || !list.length) ? null : (picked || auto);
+  $("shunlabel").textContent = !active ? "旬の食材にしぼらず、日替わりのジャンルから表示中" : `${m}月の旬の食材から選ぶ`;
   $("chips").innerHTML =
-    `<button class="chip" aria-pressed="${all}" data-l="">しぼらない</button>` +
+    `<button class="chip" aria-pressed="${!active}" data-l="">しぼらない</button>` +
     list.map(([label]) =>
       `<button class="chip" aria-pressed="${label===active}" data-l="${esc(label)}">${esc(label)}</button>`).join("");
   $("chips").querySelectorAll(".chip").forEach(b => b.onclick = () => {
@@ -352,7 +380,36 @@ $("clearCache").onclick = () => {
   render();
 };
 
+// ---- 旬の食材の編集 ----
+const em = $("editMonth");
+em.innerHTML = Array.from({length:12}, (_,i) => `<option value="${i+1}">${i+1}月</option>`).join("");
+function ingMsg(t){ $("ingMsg").textContent = t; }
+function renderTags(){
+  const m = +em.value, list = getShun(m);
+  $("tags").innerHTML = list.length
+    ? list.map(([label],i) => `<span class="tag">${esc(label)}<button data-i="${i}" aria-label="${esc(label)}を削除">×</button></span>`).join("")
+    : `<span class="empty">食材がありません。この月は「しぼらない」で表示されます。</span>`;
+  $("tags").querySelectorAll("button").forEach(b => b.onclick = () => {
+    const l = getShun(m).slice(); const [r] = l.splice(+b.dataset.i, 1);
+    setShun(m, l); ingMsg(`${r[0]}を削除しました。`); renderTags(); renderHeaderOnlyIf(m);
+  });
+}
+function renderHeaderOnlyIf(m){ if(m === cur.getMonth()+1) render(); }
+em.onchange = () => { ingMsg(""); renderTags(); };
+$("addIng").onclick = () => {
+  const m = +em.value, name = $("newIng").value.trim();
+  if(!name){ ingMsg("食材名を入力してください。"); return; }
+  const list = getShun(m);
+  if(list.some(x => x[0] === name)){ ingMsg(`${name}はもう入っています。`); return; }
+  const known = Object.values(SHUN).flat().find(x => x[0] === name);   // 既存の言い換えがあれば引き継ぐ
+  setShun(m, [...list, [name, known ? known[1] : [name]]]);
+  $("newIng").value = ""; ingMsg(`${name}を追加しました。`); renderTags(); renderHeaderOnlyIf(m);
+};
+$("newIng").onkeydown = e => { if(e.key === "Enter" && !e.isComposing) $("addIng").click(); };
+$("resetIng").onclick = () => { const m = +em.value; resetShun(m); ingMsg(`${m}月を初期設定に戻しました。`); renderTags(); renderHeaderOnlyIf(m); };
+
 render();
+em.value = cur.getMonth()+1; renderTags();
 </script>
 </body>
 </html>
