@@ -152,6 +152,7 @@ function store(k,v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){
 
 let cur = new Date(); cur.setHours(12,0,0,0);
 let picked = null;          // ユーザーが選んだ食材（null = 日替わりで自動）
+let offset = 0;             // 「ほかのジャンルを見る」で進めた数
 let token = 0;              // 古い読み込み結果を捨てるため
 
 // ---- JSONP（楽天APIが公式に対応している呼び出し方）----
@@ -210,12 +211,25 @@ function findCategory(list, keywords){
   return null;
 }
 
+// ---- しぼらないとき：毎日ちがう料理ジャンルを選ぶ ----
+const SKIP = /お菓子|スイーツ|パン|飲み物|ドリンク|離乳食|ペット|その他|調味料|ソース|ジャム|保存食|ダイエット|お弁当/;
+function hash(str){ let h = 2166136261; for(const c of str){ h ^= c.codePointAt(0); h = Math.imul(h, 16777619); } return h >>> 0; }
+function dailyCategory(list, d, off){
+  const large = Object.fromEntries(list.filter(c => c.size === "large").map(c => [c.id, c.name]));
+  let pool = list.filter(c => c.size === "medium" && !SKIP.test(c.name) && !SKIP.test(large[c.id.split("-")[0]] || ""));
+  if(!pool.length) pool = list.filter(c => c.size === "large" && !SKIP.test(c.name));
+  if(!pool.length) return null;
+  const y = d.getFullYear();
+  pool.sort((a,b) => hash(y + a.id) - hash(y + b.id));   // 年ごとに順番を入れ替え、日ごとに1つずつ進む
+  return pool[(doyOf(d) + off) % pool.length];
+}
+
 // ---- ランキング（同じ日・同じカテゴリは1日キャッシュ）----
 async function ranking(catId, dateKey){
-  const k = `rk:rank:${catId}:${dateKey}`;
+  const k = `rk:rank:${catId || "all"}:${dateKey}`;
   const c = load(k);
   if(c) return c;
-  const d = await call("CategoryRanking/20170426", {categoryId:catId});
+  const d = await call("CategoryRanking/20170426", catId ? {categoryId:catId} : {});
   const items = (d.result || []).map(x => x.recipeTitle ? x : (x.recipe || x));
   store(k, items);
   return items;
@@ -230,13 +244,20 @@ function renderHeader(){
   $("wd").textContent = WD[d.getDay()];
   const t = new Date(); t.setHours(12,0,0,0);
   $("today").disabled = keyOf(d) === keyOf(t);
-  $("shunlabel").textContent = `${m}月の旬の食材から選ぶ`;
+  const all = load("rk:mode") === "all";
+  $("shunlabel").textContent = all ? "旬の食材にしぼらず、日替わりのジャンルから表示中" : `${m}月の旬の食材から選ぶ`;
   const list = SHUN[m], auto = list[doyOf(d) % list.length][0];
-  const active = picked || auto;
-  $("chips").innerHTML = list.map(([label]) =>
-    `<button class="chip" aria-pressed="${label===active}" data-l="${esc(label)}">${esc(label)}</button>`).join("");
-  $("chips").querySelectorAll(".chip").forEach(b => b.onclick = () => { picked = b.dataset.l; render(); });
-  return list.find(x => x[0] === active);
+  const active = all ? null : (picked || auto);
+  $("chips").innerHTML =
+    `<button class="chip" aria-pressed="${all}" data-l="">しぼらない</button>` +
+    list.map(([label]) =>
+      `<button class="chip" aria-pressed="${label===active}" data-l="${esc(label)}">${esc(label)}</button>`).join("");
+  $("chips").querySelectorAll(".chip").forEach(b => b.onclick = () => {
+    if(b.dataset.l){ store("rk:mode","shun"); picked = b.dataset.l; }
+    else { store("rk:mode","all"); picked = null; offset = 0; }
+    render();
+  });
+  return active ? list.find(x => x[0] === active) : null;
 }
 
 function showMsg(html, err){ $("main").innerHTML = `<div class="msg${err?" err":""}">${html}</div>`; }
@@ -288,10 +309,17 @@ async function render(){
   showMsg("レシピを読み込んでいます…");
   try{
     const list = await categories();
-    const cat = findCategory(list, entry[1]);
+    const cat = entry ? findCategory(list, entry[1]) : dailyCategory(list, d, offset);
     const items = await ranking(cat ? cat.id : "", keyOf(d));
     if(my !== token) return;
-    renderRecipes(items, cat ? cat.name : "総合", d);
+    renderRecipes(items, cat ? cat.name : "楽天レシピ全体", d);
+    if(!entry){
+      const b = document.createElement("button");
+      b.textContent = "ほかのジャンルを見る";
+      b.style.marginTop = "20px";
+      b.onclick = () => { offset++; render(); };
+      $("main").appendChild(b);
+    }
   }catch(e){
     if(my !== token) return;
     let m = ERRMSG[e.kind] || "読み込みに失敗しました。";
@@ -305,10 +333,10 @@ async function render(){
   }
 }
 
-function shift(n){ cur = new Date(cur); cur.setDate(cur.getDate()+n); picked = null; render(); }
+function shift(n){ cur = new Date(cur); cur.setDate(cur.getDate()+n); picked = null; offset = 0; render(); }
 $("prev").onclick = () => shift(-1);
 $("next").onclick = () => shift(1);
-$("today").onclick = () => { cur = new Date(); cur.setHours(12,0,0,0); picked = null; render(); };
+$("today").onclick = () => { cur = new Date(); cur.setHours(12,0,0,0); picked = null; offset = 0; render(); };
 
 const creds = load("rk:creds");
 if(creds){ $("appId").value = creds.appId; $("accessKey").value = creds.accessKey; }
